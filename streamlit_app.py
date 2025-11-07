@@ -80,9 +80,15 @@ with col2:
             st.info("플레이어는 패배했습니다.")
 
         if st.button("다시 시작"):
-            for k in ["player_pos", "comp_pos", "turn", "last_result", "last_player_choice", "last_comp_choice", "game_over"]:
-                st.session_state[k] = 0 if k in ("player_pos", "comp_pos", "turn") else "" if k != "game_over" else False
-            st.experimental_rerun()
+            # 명시적으로 초기값으로 재설정
+            st.session_state.player_pos = 0
+            st.session_state.comp_pos = 0
+            st.session_state.turn = 0
+            st.session_state.last_result = ""
+            st.session_state.last_player_choice = ""
+            st.session_state.last_comp_choice = ""
+            st.session_state.game_over = False
+            # Streamlit은 버튼 클릭 후 자동으로 스크립트를 다시 실행하므로 별도 rerun 불필요
     else:
         choice = st.radio("가위/바위/보를 선택하세요:", ("가위", "바위", "보"))
         if st.button("제출"):
@@ -104,8 +110,6 @@ with col2:
             # 승리 체크
             if st.session_state.player_pos >= BOARD_SIZE - 1 or st.session_state.comp_pos >= BOARD_SIZE - 1:
                 st.session_state.game_over = True
-
-            st.experimental_rerun()
 
     if st.session_state.last_result:
         st.write("---")

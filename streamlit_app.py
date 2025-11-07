@@ -1,4 +1,5 @@
 import random
+import time
 import streamlit as st
 
 st.set_page_config(page_title="가위바위보 말판 게임", layout="wide")
@@ -6,6 +7,18 @@ st.set_page_config(page_title="가위바위보 말판 게임", layout="wide")
 BOARD_SIZE = 10  # 칸 수 (요청: 총 10칸)
 PLAYER_EMOJI = "🙂"
 COMP_EMOJI = "🤖"
+
+
+def safe_rerun():
+    """Streamlit의 버전 차이로 st.experimental_rerun이 없을 때를 대비한 안전한 호출 래퍼.
+    존재하면 호출하고, 없거나 호출 중 에러가 나면 무시한다.
+    """
+    try:
+        if hasattr(st, "experimental_rerun"):
+            st.experimental_rerun()
+    except Exception:
+        # 재실행이 지원되지 않거나 내부에서 에러가 나면 무시
+        pass
 
 def init_state():
     if "player_pos" not in st.session_state:
@@ -36,7 +49,7 @@ def rps_winner(p, c):
 
 init_state()
 
-st.title("부루마블 스타일 가위바위보 말판 게임")
+st.title("가위바위보 말판 게임")
 st.write("플레이어는 매 턴 가위/바위/보 중 하나를 선택합니다. 이기면 말판이 앞으로 한 칸 이동합니다. 먼저 도착 칸에 도달하면 승리합니다.")
 
 col1, col2 = st.columns([3, 1])
@@ -65,6 +78,8 @@ with col2:
     st.write(f"플레이어 위치: {st.session_state.player_pos} / {BOARD_SIZE-1}")
     st.write(f"컴퓨터 위치: {st.session_state.comp_pos} / {BOARD_SIZE-1}")
     st.write("---")
+    # 결과 및 알림을 표시할 자리
+    message_area = st.empty()
 
     if st.session_state.game_over:
         player_won = st.session_state.player_pos >= BOARD_SIZE - 1
@@ -88,15 +103,27 @@ with col2:
             st.session_state.last_player_choice = ""
             st.session_state.last_comp_choice = ""
             st.session_state.game_over = False
-            # Streamlit은 버튼 클릭 후 자동으로 스크립트를 다시 실행하므로 별도 rerun 불필요
+            # Streamlit은 버튼 클릭 후 자동으로 스크립트를 다시 실행하더라도
+            # 일부 환경/버전에서 명시적 rerun 호출이 있었을 때 AttributeError가 발생할 수 있어
+            # 안전한 래퍼를 호출해 재실행을 시도합니다(없으면 무시).
+            safe_rerun()
     else:
-        choice = st.radio("가위/바위/보를 선택하세요:", ("가위", "바위", "보"))
-        if st.button("제출"):
+        # 더 크고 시각적인 선택지: 이모지 + 라벨을 가진 버튼을 사용
+        st.subheader("가위/바위/보 선택")
+        cols = st.columns(3)
+        choices = [("✂️", "가위"), ("✊", "바위"), ("🖐️", "보")]
+        clicked = None
+        for col, (emoji, label) in zip(cols, choices):
+            # 버튼 텍스트에 이모지와 라벨을 같이 표시
+            if col.button(f"{emoji}  {label}", key=f"btn_{label}"):
+                clicked = label
+
+        if clicked:
             # 컴퓨터 선택
             comp_choice = random.choice(["가위", "바위", "보"])
-            st.session_state.last_player_choice = choice
+            st.session_state.last_player_choice = clicked
             st.session_state.last_comp_choice = comp_choice
-            result = rps_winner(choice, comp_choice)
+            result = rps_winner(clicked, comp_choice)
             st.session_state.turn += 1
             if result == "player":
                 st.session_state.player_pos += 1
@@ -110,6 +137,17 @@ with col2:
             # 승리 체크
             if st.session_state.player_pos >= BOARD_SIZE - 1 or st.session_state.comp_pos >= BOARD_SIZE - 1:
                 st.session_state.game_over = True
+
+            # 컴퓨터 선택을 크게 잠시 보여주고, 이어서 결과 문구를 바로 표시
+            try:
+                message_area.markdown(f"<div style='font-size:22px; font-weight:600;'>컴퓨터는 {comp_choice}를 선택했어요! 🎯</div>", unsafe_allow_html=True)
+                time.sleep(0.8)
+            except Exception:
+                # 시간지연이 환경에 따라 제한될 수 있으므로 실패해도 계속
+                pass
+
+            # 결과를 즉시 하이라이트하여 위치 변경 이유를 명확히 보여줌
+            message_area.markdown(f"<div style='font-size:18px;'><strong>{st.session_state.last_result}</strong><br><br>플레이어: {st.session_state.last_player_choice}  |  컴퓨터: {st.session_state.last_comp_choice}</div>", unsafe_allow_html=True)
 
     if st.session_state.last_result:
         st.write("---")

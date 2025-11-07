@@ -54,24 +54,6 @@ st.write("플레이어는 매 턴 가위/바위/보 중 하나를 선택합니�
 
 col1, col2 = st.columns([3, 1])
 
-with col1:
-    # 보드 그리기
-    cells = st.columns(BOARD_SIZE)
-    for i, c in enumerate(cells):
-        content = f"<div style='border:1px solid #ddd; padding:10px; text-align:center; min-width:60px;'>"
-        content += f"<div style='font-weight:bold'>{i}</div>"
-        tokens = []
-        if st.session_state.player_pos == i:
-            tokens.append(PLAYER_EMOJI)
-        if st.session_state.comp_pos == i:
-            tokens.append(COMP_EMOJI)
-        if tokens:
-            content += "<div style='font-size:24px; margin-top:6px;'>" + " ".join(tokens) + "</div>"
-        else:
-            content += "<div style='color:#888; margin-top:18px;'>-</div>"
-        content += "</div>"
-        c.markdown(content, unsafe_allow_html=True)
-
 with col2:
     st.subheader("턴 정보")
     st.write(f"턴: {st.session_state.turn}")
@@ -126,11 +108,13 @@ with col2:
             result = rps_winner(clicked, comp_choice)
             st.session_state.turn += 1
             if result == "player":
-                st.session_state.player_pos += 1
+                # 먼저 결과 문구를 준비
                 st.session_state.last_result = "플레이어가 이겼습니다! 플레이어가 한 칸 전진합니다."
+                # 바로 위치를 갱신하여 이후 보드 렌더링 시 반영되게 함
+                st.session_state.player_pos += 1
             elif result == "comp":
-                st.session_state.comp_pos += 1
                 st.session_state.last_result = "컴퓨터가 이겼습니다! 컴퓨터가 한 칸 전진합니다."
+                st.session_state.comp_pos += 1
             else:
                 st.session_state.last_result = "무승부입니다. 말은 움직이지 않습니다."
 
@@ -149,10 +133,24 @@ with col2:
             # 결과를 즉시 하이라이트하여 위치 변경 이유를 명확히 보여줌
             message_area.markdown(f"<div style='font-size:18px;'><strong>{st.session_state.last_result}</strong><br><br>플레이어: {st.session_state.last_player_choice}  |  컴퓨터: {st.session_state.last_comp_choice}</div>", unsafe_allow_html=True)
 
-    if st.session_state.last_result:
-        st.write("---")
-        st.write(f"마지막 결과: {st.session_state.last_result}")
-        if st.session_state.last_player_choice:
-            st.write(f"플레이어: {st.session_state.last_player_choice}  |  컴퓨터: {st.session_state.last_comp_choice}")
+    # Note: detailed last_result block moved into message_area to keep feedback near the board
+
+with col1:
+    # 보드 그리기 (상태 업데이트 후 렌더링하여 이동이 즉시 보이도록 함)
+    cells = st.columns(BOARD_SIZE)
+    for i, c in enumerate(cells):
+        content = f"<div style='border:1px solid #ddd; padding:10px; text-align:center; min-width:60px;'>"
+        content += f"<div style='font-weight:bold'>{i}</div>"
+        tokens = []
+        if st.session_state.player_pos == i:
+            tokens.append(PLAYER_EMOJI)
+        if st.session_state.comp_pos == i:
+            tokens.append(COMP_EMOJI)
+        if tokens:
+            content += "<div style='font-size:24px; margin-top:6px;'>" + " ".join(tokens) + "</div>"
+        else:
+            content += "<div style='color:#888; margin-top:18px;'>-</div>"
+        content += "</div>"
+        c.markdown(content, unsafe_allow_html=True)
 
 st.write("\n\n---\nMade with Streamlit")
